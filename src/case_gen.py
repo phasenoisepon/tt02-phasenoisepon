@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 import codecs
-ascii_alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+import string
+# ascii_alphabet = string.printable
+ascii_alphabet = "".join([chr(i) for i in range(128)])
 rot_13_alphabet = codecs.encode(ascii_alphabet, "rot_13")
 
 ### Example format of case block
@@ -20,5 +22,5 @@ for idx, letter in enumerate(ascii_alphabet):
     rot_13_letter_int = ord(rot13_letter)
     
     high_nibble, low_nibble = ascii_letter_int >> 4, ascii_letter_int & 0x0F
-    print(format_str.format("{0:0{1}x}".format(rot_13_letter_int,2),hex(high_nibble)[2:],hex(low_nibble)[2:],rot13_letter, ascii_letter))
+    print(format_str.format("{0:0{1}x}".format(rot_13_letter_int,2),hex(high_nibble)[2:],hex(low_nibble)[2:],ascii(rot13_letter), ascii(ascii_letter)))
     
