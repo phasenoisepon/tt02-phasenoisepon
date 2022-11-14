@@ -5,40 +5,42 @@ module phasenoisepon_seven_segment_seconds #( parameter MAX_COUNT = 1000 ) (
   output [7:0] io_out
 );
     
+    // setup registers
+    reg [3:0] nibble_low;
+    reg [3:0] nibble_high;
+    reg [7:0] output_reg;
+
+    // declare wires
     wire clk = io_in[0];
     wire reset = io_in[1];
-    wire [6:0] led_out;
-    assign io_out[6:0] = led_out;
+    wire [1:0] ctl = io_in[3:2];
+    wire [3:0] data_in = io_in[7:4]
+    wire [7:0] data_out;
+    assign io_out[7:0] = output_reg;
 
-    // external clock is 1000Hz, so need 10 bit counter
-    reg [9:0] second_counter;
-    reg [3:0] digit;
+    // define useful FSM states
+    localparam CTL_LOW_NIBBLE  = 2'b00;
+    localparam CTL_HIGH_NIBBLE = 2'b01;
+    localparam CALC_OUTPUT     = 2'b1x; //allow don't care
 
     always @(posedge clk) begin
-        // if reset, set counter to 0
+        // if reset, then reset all reg's to 0
         if (reset) begin
-            second_counter <= 0;
-            digit <= 0;
+            nibble_low <= 0;
+            nibble_high <= 0;
+            output_reg <= 0;
         end else begin
-            // if up to 16e6
-            if (second_counter == MAX_COUNT) begin
-                // reset
-                second_counter <= 0;
-
-                // increment digit
-                digit <= digit + 1'b1;
-
-                // only count from 0 to 9
-                if (digit == 9)
-                    digit <= 0;
-
-            end else
-                // increment counter
-                second_counter <= second_counter + 1'b1;
+            // read control lines
+            if (ctl == CTL_LOW_NIBBLE) begin
+                output_reg <= 8'h0F;
+                nibble_low <= data_in;
+            end else if (ctl == CTL_HIGH_NIBBLE) begin
+                output_reg <= 8'hF0;
+                nibble_high <= data_in;
+            end else if (ctl == CALC_OUTPUT) begin
+                output_reg <= 8'hFF; // stub
+            end
         end
     end
-
-    // instantiate segment display
-    seg7 seg7(.counter(digit), .segments(led_out));
 
 endmodule
