@@ -25,7 +25,7 @@ Sbox = [
 ]
 
 @cocotb.test()
-async def test_7seg(dut):
+async def test_in_sequence(dut):
     dut._log.info("start")
     clock = Clock(dut.clk, 10, units="us")
     cocotb.fork(clock.start())
@@ -38,30 +38,24 @@ async def test_7seg(dut):
     await ClockCycles(dut.clk, 10)
     
     dut.rst.value = 0
-    # check if ctl=00 reads 0x0f when clock advances
+    dut._log.info("check if ctl=00 reads 0x0f when clock advances")
     await ClockCycles(dut.clk, 10)
     assert int(dut.data_out.value) == 0x0F
 
-    # check if ctl=01 reads 0xf0 when clock advances
+    dut._log.info("check if ctl=01 reads 0xf0 when clock advances")
     dut.ctl.value = 1
     await ClockCycles(dut.clk, 10)
     assert int(dut.data_out.value) == 0xF0
 
-    # check if ctl=10 reads 0xff when clock advances
+    dut._log.info("check if ctl=10 reads 0xff when clock advances")
     dut.ctl.value = 2
     await ClockCycles(dut.clk, 10)
-    assert int(dut.data_out.value) == 0xFF
+    assert int(dut.data_out.value) == 0x63
 
-    # check if ctl=10 reads 0xff when clock advances
+    dut._log.info("check if ctl=10 reads 0xff when clock advances")
     dut.ctl.value = 3
     await ClockCycles(dut.clk, 10)
-    assert int(dut.data_out.value) == 0xFF
-
-    dut._log.info("check all segments")
-    #for i in range(10):
-    #    dut._log.info("check segment {}".format(i))
-    #    await ClockCycles(dut.clk, 100)
-    #    assert int(dut.segments.value) == segments[i]
+    assert int(dut.data_out.value) == 0x63
 
 @cocotb.test()
 async def test_low_nibble_output(dut):
@@ -77,8 +71,26 @@ async def test_low_nibble_output(dut):
     await ClockCycles(dut.clk, 10)
     
     dut.rst.value = 0
-    # check if ctl=00 reads 0x0f when clock advances
+    dut._log.info(" check if ctl=00 reads 0x0f when clock advances")
     await ClockCycles(dut.clk, 10)
+    assert int(dut.data_out.value) == 0x0F
+
+@cocotb.test()
+async def test_low_nibble_output_tight(dut):
+    dut._log.info("start")
+    clock = Clock(dut.clk, 10, units="us")
+    cocotb.fork(clock.start())
+    
+    dut._log.info("reset")
+    # reset all init to 0
+    dut.rst.value = 1
+    dut.ctl.value = 0
+    dut.data_in.value = 0
+    await ClockCycles(dut.clk, 10)
+    
+    dut.rst.value = 0
+    dut._log.info(" check if ctl=00 reads 0x0f when clock advances")
+    await ClockCycles(dut.clk, 2)
     assert int(dut.data_out.value) == 0x0F
 
 @cocotb.test()
@@ -95,8 +107,132 @@ async def test_high_nibble_output(dut):
     await ClockCycles(dut.clk, 10)
     
     dut.rst.value = 0
-
-    # check if ctl=01 reads 0xf0 when clock advances
+    dut._log.info("check if ctl=01 reads 0xf0 when clock advances")
     dut.ctl.value = 1
     await ClockCycles(dut.clk, 10)
     assert int(dut.data_out.value) == 0xF0
+
+@cocotb.test()
+async def test_reset_data_out(dut):
+    dut._log.info("start")
+    clock = Clock(dut.clk, 10, units="us")
+    cocotb.fork(clock.start())
+    
+    dut._log.info("reset")
+    # reset all init to 0
+    dut.rst.value = 1
+    dut.ctl.value = 0
+    dut.data_in.value = 0
+    await ClockCycles(dut.clk, 10)
+    
+    dut.rst.value = 0
+    dut._log.info("after reset, check if io_out reads 0x00")
+    await ClockCycles(dut.clk, 1)
+    assert int(dut.data_out.value) == 0x00
+
+@cocotb.test()
+async def test_reset_data_out_stability(dut):
+    dut._log.info("start")
+    clock = Clock(dut.clk, 10, units="us")
+    cocotb.fork(clock.start())
+    
+    dut._log.info("reset")
+    # reset all init to 0
+    dut.rst.value = 1
+    dut.ctl.value = 2
+    dut.data_in.value = 0
+    await ClockCycles(dut.clk, 10)
+
+    dut.rst.value = 0
+    dut._log.info("after reset, check if io_out reads 0x00")
+    await ClockCycles(dut.clk, 1)
+    assert int(dut.data_out.value) == 0x00
+    await ClockCycles(dut.clk, 1)
+    assert int(dut.data_out.value) == 0x63
+
+@cocotb.test()
+async def test_sbox_reset_each(dut):
+    dut._log.info("start")
+    clock = Clock(dut.clk, 10, units="us")
+    cocotb.fork(clock.start())
+    
+    dut._log.info("check all sbox permutations, resetting each time")
+    for i in range(0xFF):
+        # reset DUT
+        dut._log.info("reset sequence {}".format(i))
+        # reset all init to 0
+        dut.rst.value = 1
+        dut.ctl.value = 0
+        dut.data_in.value = 0
+        await ClockCycles(dut.clk, 2)
+        assert int(dut.data_out.value) == 0x00
+        dut.rst.value = 0
+        await ClockCycles(dut.clk, 1) # wait 1 clock and check for still 0
+        assert int(dut.data_out.value) == 0x00
+
+        high, low = i >> 4, i & 0x0F
+
+        # load nibble_low
+        dut._log.info(f" iter={i}, load nibble low with {low}")
+        dut.ctl.value = 0
+        dut.data_in.value = low
+        await ClockCycles(dut.clk, 2)
+        assert int(dut.data_out.value) == 0x0F
+
+        # load nibble_high
+        dut._log.info(f" iter={i}, load nibble high with {high}")
+        dut.ctl.value = 1
+        dut.data_in.value = high
+        await ClockCycles(dut.clk, 2)
+        assert int(dut.data_out.value) == 0xF0
+
+        # set control signal
+        dut.ctl.value = 2
+        await ClockCycles(dut.clk, 2)
+        # check result
+        dut._log.info(f"checking if {hex(i)},int={i} returns {hex(Sbox[i])},int={Sbox[i]}")
+        assert int(dut.data_out.value) == Sbox[i]
+
+@cocotb.test()
+async def test_sbox_sequence(dut):
+    dut._log.info("start")
+    clock = Clock(dut.clk, 10, units="us")
+    cocotb.fork(clock.start())
+
+    # reset DUT
+    dut._log.info("reset sequence")
+    # reset all init to 0
+    dut.rst.value = 1
+    dut.ctl.value = 0
+    dut.data_in.value = 0
+    await ClockCycles(dut.clk, 2)
+    assert int(dut.data_out.value) == 0x00
+    dut.rst.value = 0
+    await ClockCycles(dut.clk, 1) # wait 1 clock and check for still 0
+    assert int(dut.data_out.value) == 0x00
+    
+    dut._log.info("check all sbox permutations, in a sequence")
+    for i in range(0xFF):
+        high, low = i >> 4, i & 0x0F
+        await ClockCycles(dut.clk, 2)
+
+        # load nibble_low
+        dut._log.info(f" iter={i}, load nibble low with {low}")
+        dut.ctl.value = 0
+        dut.data_in.value = low
+        await ClockCycles(dut.clk, 2)
+        assert int(dut.data_out.value) == 0x0F
+
+        # load nibble_high
+        dut._log.info(f" iter={i}, load nibble high with {high}")
+        dut.ctl.value = 1
+        dut.data_in.value = high
+        await ClockCycles(dut.clk, 2)
+        assert int(dut.data_out.value) == 0xF0
+
+        # set control signal
+        dut.ctl.value = 2
+        await ClockCycles(dut.clk, 2)
+        # check result
+        dut._log.info(f"checking if {hex(i)},int={i} returns {hex(Sbox[i])},int={Sbox[i]}")
+        assert int(dut.data_out.value) == Sbox[i]
