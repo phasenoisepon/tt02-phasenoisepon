@@ -11,6 +11,11 @@
 - all tests should pass
 - run `gtkwave ./tb.vcd` to view the waveforms
 
+
+## TODOs:
+- test and develop this locally without using GH Actions following https://discord.com/channels/1009193568256135208/1009193568256135211/1038381997493592104
+- implement this using direct logic instead of a generated LUT (did the synthesizer already infer what I was doing with the passthrough?)
+- Use don't care for the default case in the case statement, which would probably propogate errors better for simulation
 ---
 
 # What is Tiny Tapeout?
