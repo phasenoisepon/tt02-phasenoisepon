@@ -10,7 +10,9 @@ module tb (
     // testbench is controlled by test.py
     input clk,
     input rst,
-    output [6:0] segments
+    input [1:0] ctl,
+    input [3:0] data_in,
+    output [7:0] data_out
    );
 
     // this part dumps the trace to a vcd file that can be viewed with GTKWave
@@ -21,9 +23,9 @@ module tb (
     end
 
     // wire up the inputs and outputs
-    wire [7:0] inputs = {6'b0, rst, clk};
+    wire [7:0] inputs = {data_in, ctl, rst, clk};
     wire [7:0] outputs;
-    assign segments = outputs[6:0];
+    assign data_out = outputs[7:0];
 
     // instantiate the DUT
     phasenoisepon_seven_segment_seconds #(.MAX_COUNT(100)) seven_segment_seconds(

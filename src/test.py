@@ -31,12 +31,72 @@ async def test_7seg(dut):
     cocotb.fork(clock.start())
     
     dut._log.info("reset")
+    # reset all init to 0
     dut.rst.value = 1
+    dut.ctl.value = 0
+    dut.data_in.value = 0
     await ClockCycles(dut.clk, 10)
+    
     dut.rst.value = 0
+    # check if ctl=00 reads 0x0f when clock advances
+    await ClockCycles(dut.clk, 10)
+    assert int(dut.data_out.value) == 0x0F
+
+    # check if ctl=01 reads 0xf0 when clock advances
+    dut.ctl.value = 1
+    await ClockCycles(dut.clk, 10)
+    assert int(dut.data_out.value) == 0xF0
+
+    # check if ctl=10 reads 0xff when clock advances
+    dut.ctl.value = 2
+    await ClockCycles(dut.clk, 10)
+    assert int(dut.data_out.value) == 0xFF
+
+    # check if ctl=10 reads 0xff when clock advances
+    dut.ctl.value = 3
+    await ClockCycles(dut.clk, 10)
+    assert int(dut.data_out.value) == 0xFF
 
     dut._log.info("check all segments")
-    for i in range(10):
-        dut._log.info("check segment {}".format(i))
-        await ClockCycles(dut.clk, 100)
-        assert int(dut.segments.value) == segments[i]
+    #for i in range(10):
+    #    dut._log.info("check segment {}".format(i))
+    #    await ClockCycles(dut.clk, 100)
+    #    assert int(dut.segments.value) == segments[i]
+
+@cocotb.test()
+async def test_low_nibble_output(dut):
+    dut._log.info("start")
+    clock = Clock(dut.clk, 10, units="us")
+    cocotb.fork(clock.start())
+    
+    dut._log.info("reset")
+    # reset all init to 0
+    dut.rst.value = 1
+    dut.ctl.value = 0
+    dut.data_in.value = 0
+    await ClockCycles(dut.clk, 10)
+    
+    dut.rst.value = 0
+    # check if ctl=00 reads 0x0f when clock advances
+    await ClockCycles(dut.clk, 10)
+    assert int(dut.data_out.value) == 0x0F
+
+@cocotb.test()
+async def test_high_nibble_output(dut):
+    dut._log.info("start")
+    clock = Clock(dut.clk, 10, units="us")
+    cocotb.fork(clock.start())
+    
+    dut._log.info("reset")
+    # reset all init to 0
+    dut.rst.value = 1
+    dut.ctl.value = 0
+    dut.data_in.value = 0
+    await ClockCycles(dut.clk, 10)
+    
+    dut.rst.value = 0
+
+    # check if ctl=01 reads 0xf0 when clock advances
+    dut.ctl.value = 1
+    await ClockCycles(dut.clk, 10)
+    assert int(dut.data_out.value) == 0xF0
